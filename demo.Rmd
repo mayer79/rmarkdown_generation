@@ -1,0 +1,108 @@
+---
+title: "RMarkdown Generation"
+author: "Michael Mayer"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_float:
+      smooth_scroll: false
+subtitle: Demo
+---
+
+```{r setup, warning = FALSE, message = FALSE, echo = FALSE}
+library(tidyverse)
+# library(kableExtra)
+library(plotly)
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE) 
+
+# Renderer (can be customized)
+render <- function(x) {
+  if(inherits(x, "character")) {
+    cat(x)
+  } else if (inherits(x, "ggplot")) {
+    print(x)
+  } else if (inherits(x, "htmlwidget")) {
+    cat(htmltools::renderTags(as_widget(x))$html)
+  } else if (inherits(x, "data.frame")) {
+    print(knitr::kable(x, format = "pipe"))
+  } else {
+    stop("Cannot render object of class(es) ", class(x))
+  }
+  cat("\n\n")
+}
+```
+
+# Introduction
+
+One of the most powerful reporting techniques in RMarkdown is to generate also the Markdown code (especially headers) from within R. It is the purpose of this notebook to demonstrate this.
+
+The following code loops over a couple of data sets and analyses. It has two parts:
+
+1. Each single object (incl. headers) is prepared and attached to a list.
+2. Each element in above list is rendered by its native method. Strings are printed by `cat`, ggplot plots by `print` etc. Some extra code is required if interactive html widgets (e.g. using `plotly`) are to be used.
+
+# Analysis
+
+```{r, results="asis", fig.keep="all", message=FALSE, warning=FALSE}
+
+# List of datasets along with meta information on variables to be analysed
+X <- list(
+  iris = list(data = iris, y = "Sepal.Length", x = "Species"),
+  mtcars = list(data = mtcars, y = "mpg", x = "gear"),
+  CO2 = list(data = CO2, y = "uptake", x = "Treatment")
+) 
+
+#==================================================================
+# STEP 1: Calculate everything and append to "out"
+#==================================================================
+
+out <- list()
+
+for (nm in names(X)) { # nm <- "iris"
+  x <- X[[nm]]$data
+  
+  # Header
+  out[[length(out) + 1L]] <- paste0("## Data `", nm, "`")  
+  
+  # Text info
+  out[[length(out) + 1L]] <- paste("The dataset", nm, "has", nrow(x), "rows.")
+
+  # Table head
+  out[[length(out) + 1L]] <- paste("###", "Top six rows")  
+  out[[length(out) + 1L]] <- head(x)
+  
+  # A scatter plot
+  p <- ggplot(x, aes_string(x = X[[nm]]$x, y = X[[nm]]$y)) +
+    geom_jitter(color = "orange", alpha = 0.8, width = 0.1, height = 0)
+  out[[length(out) + 1L]] <- paste("###", "A scatter plot with horizontal jitter")  
+  out[[length(out) + 1L]] <- p
+  
+  # A dynamic plot
+  out[[length(out) + 1L]] <- paste("###", "A corresponding dynamic plot")  
+  out[[length(out) + 1L]] <- ggplotly(p)
+}
+
+#==================================================================
+# STEP 2: Renders each element in out by its native method
+#==================================================================
+
+for (element in out) {
+  render(element)
+}
+```
+  
+```{r}
+# This cryptical code solves an incompatibility between plotly and rmarkdown, see
+# https://stackoverflow.com/questions/49990653/plotly-plot-doesnt-render-within-for-loop-of-rmarkdown-document
+# If you don't use plotly, the whole chunk can be dropped
+deps <- lapply(
+  Filter(f = function(x) inherits(x, "htmlwidget"), x = out),
+  FUN = function(hw) htmltools::renderTags(hw)$dependencies
+)
+htmltools::attachDependencies(
+  x = htmltools::tagList(), 
+  value = unlist(deps, recursive = FALSE)
+)
+```
