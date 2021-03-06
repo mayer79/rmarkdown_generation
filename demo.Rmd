@@ -80,9 +80,9 @@ One of the most powerful reporting techniques in RMarkdown is to generate also t
 
 The code does three things:
 
-1. Keep analysis results in a nested list `results`. Usually, this part is done before heading for RMarkdown.
-2. Move the contents of `results` to a (non-nested) list `out` along with additional markdown elements. The order of elements will be the one appearing in the resulting document.
-3. Render each element in `out` with its corresponding render method.
+1. Keep analysis results in a (possibly nested) list `results`. Usually, this part is done before heading for RMarkdown.
+2. Move the contents of `results` to a (non-nested) list `out` along with additional markdown elements like headers. The order of elements will be the one appearing in the resulting document.
+3. Loop over `out` and render each element with its corresponding `render()` method.
 
 # Results
 
